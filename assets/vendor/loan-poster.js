@@ -92,7 +92,6 @@
     ctx.fillStyle = '#dde1e5';
     for(let x=10;x<210;x+=16) for(let y=10;y<210;y+=16){ctx.beginPath();ctx.arc(x,y,2,0,Math.PI*2);ctx.fill();}
     text('KIRAAN LOAN KENDERAAN',40,50,24,'#101820',430);
-    ctx.textAlign='right';text('https://carloanmalaysia.vercel.app',1040,50,24,'#087f68',550);ctx.textAlign='left';
     ctx.fillStyle='#e00028';ctx.fillRect(40,66,75,4);
     text(dual ? 'BANDING KERETA' : v.brand+' '+v.model,40,137,52,'#071b43',850);
     text(dual ? 'Tetapan loan berasingan' : v.variant,40,180,28,'#627086',920);

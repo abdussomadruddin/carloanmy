@@ -16,7 +16,9 @@
 !lib
 !lib/pro.cjs
 !lib/agents.cjs
+!lib/admin-cases.cjs
 !assets/vendor/admin-agents.js
+!assets/vendor/admin-cases.js
 !catalog.js
 !rebates.js
 !manifest.webmanifest

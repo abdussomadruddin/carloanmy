@@ -241,6 +241,7 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ loggedOut: true });
     }
     const user = await requireAdmin(req, res);
+    if(['admin-cases','admin-case-analysis','admin-case-detail'].includes(action)) return await require('../lib/admin-cases.cjs')(req,res,{supabase,fail,uuid});
     if(action==='push-readiness'&&req.method==='GET') {
       const {data}=await supabase('/rest/v1/rpc/car_push_readiness',{method:'POST',body:{}});
       return res.status(200).json(data);

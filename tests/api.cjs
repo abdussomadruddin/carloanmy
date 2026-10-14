@@ -41,6 +41,13 @@ test('silent readiness check requires admin and never sends push', async () => {
   const res=await request('push-readiness',{cookie:'__Host-carloan-admin=token'});
   assert.equal(res.code,200);assert.equal(res.data.readyDevices,2);assert.equal(calls.length,2);
 });
+test('all-case admin endpoints reject public and agent access',async()=>{
+  for(const action of ['admin-cases','admin-case-analysis','admin-case-detail']){
+    assert.equal((await request(action)).code,401);
+    global.fetch=async()=>new Response(JSON.stringify({email:'agent@example.test',email_confirmed_at:'2026-01-01'}));
+    assert.equal((await request(action,{cookie:'__Host-carloan-admin=token'})).code,403);
+  }
+});
 test('public config cannot expose private credentials', async () => {
   const res = await request('config'); assert.equal(res.code, 200); assert.ok(res.data.ready);
   assert.ok(!JSON.stringify(res.data).includes('private-service-key'));

@@ -177,6 +177,7 @@
       recorded = true;
       try {
         localStorage.setItem(contactKey,JSON.stringify({name:form.elements.name.value.trim(),phone:'+'+phone}));
+        dispatchEvent(new Event('agent-profile-change'));
         contactMode(true);
       } catch { deviceWarning = 'Browser tidak membenarkan profil disimpan pada peranti ini. Kalkulator masih boleh digunakan.'; }
       saveButton.textContent = 'Simpan Gambar';

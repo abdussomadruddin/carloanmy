@@ -187,6 +187,7 @@ module.exports = async function handler(req, res) {
       const snapshot = incoming?.cars ? {version:2,cars:cleaned} : cleaned[0];
       const { data } = await supabase('/rest/v1/rpc/car_save_download', { method: 'POST', body: { request_id: id, person_name: name, whatsapp: phone, calculation: snapshot, client_hash: hash(String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown')) } });
       if (!data) fail(429, 'Terlalu banyak permintaan. Cuba sebentar lagi.');
+      if(readCookie(req,'__Host-carloan-agent')||readCookie(req,'__Host-carloan-agent-refresh'))return await require('../lib/pro.cjs')(req,res,{supabase,fail,readCookie,uuid,validateSubscription,pushReady,actionOverride:'pro-profile-save',contactRecorded:true});
       return res.status(200).json({ saved: true });
     }
     if (action === 'announcement' && req.method === 'GET') {

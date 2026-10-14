@@ -100,6 +100,8 @@ const root = path.resolve(__dirname,'..');
     await poster.getByRole('button',{name:'Tutup',exact:true}).click();
     await page.evaluate(()=>window.agentProfile.open());
     const profile=page.locator('.profile-dialog');
+    assert.equal(await profile.getByLabel('Nama',{exact:true}).inputValue(),'Latest Agent');
+    assert.equal(await profile.getByLabel('No WhatsApp',{exact:true}).inputValue(),'+60198765432');
     await profile.getByLabel('Nama',{exact:true}).fill('Saved Profile');
     await profile.getByLabel('No WhatsApp',{exact:true}).fill('0187654321');
     assert.equal(await profile.locator('[type=file]').count(),0);

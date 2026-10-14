@@ -126,3 +126,24 @@ test('profile save preserves native HTTP request headers and refresh-only sessio
     assert.equal(JSON.parse(calls.find(c=>c.url.includes('/rpc/')).opts.body).whatsapp,'+60177498085');
   }
 });
+test('poster download updates authenticated profile without duplicating contact records',async()=>{
+  const snapshot={brand:'Proton',model:'S70',variant:'Lite',loanPeriod:9,inputPrice:100000,rebate:0,extras:0,insurance:0,ncd:0,depositAmount:0,loanAfterDeposit:100000,interestRate:2.5,baseMonthly:100000*1.175/84,selectedMonthly:100000*1.225/108,batteryMonthly:0};
+  let calls=[],rejectUpdate=false;
+  global.fetch=async(url,opts)=>{
+    calls.push({url,opts});
+    if(url.includes('grant_type=refresh_token'))return new Response(JSON.stringify({access_token:'renewed-access',refresh_token:'renewed-refresh',user}));
+    if(opts.method==='PUT'&&rejectUpdate)return new Response('{}',{status:503});
+    return new Response(JSON.stringify(url.endsWith('/auth/v1/user')?user:url.includes('/rpc/')?true:user));
+  };
+  for(const cookie of ['__Host-carloan-agent=access-token','__Host-carloan-agent-refresh=refresh-only','']){
+    calls=[];const res=await request('download-request',{native:true,cookie,body:{id,name:'Poster Agent',phone:'0177498085',snapshot}});
+    assert.equal(res.code,200);assert.equal(res.data.saved,true);
+    assert.equal(calls.filter(c=>c.url.includes('/rpc/car_save_download')).length,1);
+    const update=calls.find(c=>c.opts.method==='PUT');
+    if(cookie){assert.equal(JSON.parse(update.opts.body).user_metadata.whatsapp,'+60177498085');assert.equal(JSON.parse(update.opts.body).user_metadata.name,'Poster Agent');}else assert.equal(update,undefined);
+  }
+  rejectUpdate=true;
+  assert.equal((await request('download-request',{native:true,body:{id,name:'Poster Agent',phone:'0177498085',snapshot}})).code,503);
+  rejectUpdate=false;
+  assert.equal((await request('download-request',{native:true,body:{id,name:'Poster Agent',phone:'0177498085',snapshot}})).code,200);
+});

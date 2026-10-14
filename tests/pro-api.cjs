@@ -6,8 +6,9 @@ Object.assign(process.env,{SUPABASE_URL:'https://test.supabase.co',SUPABASE_SERV
 after(()=>{global.fetch=originalFetch;process.env=env;});
 const user={id:'11111111-1111-4111-8111-111111111111',email:'agent@test.example',email_confirmed_at:'2026-01-01'};
 const id='33333333-3333-4333-8333-333333333333';
-async function request(action,{body,method=body?'POST':'GET',cookie='__Host-carloan-agent=access-token',origin='https://carloanmalaysia.vercel.app',authorization}={}){
-  const req={query:{action},method,body,headers:{origin,cookie,authorization,'content-type':'application/json'}};
+async function request(action,{body,method=body?'POST':'GET',cookie='__Host-carloan-agent=access-token',origin='https://carloanmalaysia.vercel.app',authorization,native=false}={}){
+  const req=native?new (require('node:http').IncomingMessage)(new (require('node:net').Socket)()):{};
+  Object.assign(req,{query:{action},method,body,headers:{origin,cookie,authorization,'content-type':'application/json'}});
   const res={headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},json(data){this.data=data;return this;}};
   await handler(req,res);return res;
 }
@@ -109,4 +110,19 @@ test('authenticated profile save synchronizes contact registry and account metad
   assert.equal((await request('agent-profile',{body:{id,name:'Updated agent',phone:'0173559147'}})).code,200);
   const update=calls.find(c=>c.opts.method==='PUT');assert.ok(update.url.endsWith('/'+user.id));assert.equal(JSON.parse(update.opts.body).user_metadata.whatsapp,'+60173559147');
   assert.equal(JSON.parse(calls.find(c=>c.url.includes('/rpc/')).opts.body).whatsapp,'+60173559147');
+});
+test('profile save preserves native HTTP request headers and refresh-only sessions',async()=>{
+  const calls=[];
+  global.fetch=async(url,opts)=>{
+    calls.push({url,opts});
+    if(url.includes('grant_type=refresh_token'))return new Response(JSON.stringify({access_token:'renewed-access',refresh_token:'renewed-refresh',user}));
+    return new Response(JSON.stringify(url.endsWith('/auth/v1/user')?user:url.includes('/rpc/')?true:user));
+  };
+  for(const cookie of ['__Host-carloan-agent=access-token','__Host-carloan-agent-refresh=refresh-only']){
+    calls.length=0;
+    const res=await request('agent-profile',{native:true,cookie,body:{id,name:'Updated agent',phone:'+60177498085'}});
+    assert.equal(res.code,200);assert.equal(res.data.saved,true);
+    assert.equal(JSON.parse(calls.find(c=>c.opts.method==='PUT').opts.body).user_metadata.whatsapp,'+60177498085');
+    assert.equal(JSON.parse(calls.find(c=>c.url.includes('/rpc/')).opts.body).whatsapp,'+60177498085');
+  }
 });

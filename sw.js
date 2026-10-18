@@ -1,10 +1,12 @@
 const APP_ICON = '/icon-192.png?v=20260930';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
-// Network-only: never serve stale vehicle prices or authenticated admin responses.
+// Revalidate public static assets; never cache prices, HTML or authenticated API data.
 self.addEventListener('fetch', event => {
   if (event.request.method === 'GET' && new URL(event.request.url).origin === self.location.origin) {
-    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+    const path = new URL(event.request.url).pathname;
+    const staticAsset = !path.startsWith('/api/') && !path.startsWith('/admin') && (/\.(?:png|jpg|jpeg|webp|svg|ico|woff2?)$/i.test(path) || path.startsWith('/assets/vendor/'));
+    event.respondWith(fetch(event.request, { cache: staticAsset ? 'no-cache' : 'no-store' }));
   }
 });
 self.addEventListener('push', event => {

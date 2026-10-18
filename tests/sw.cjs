@@ -4,6 +4,7 @@ const vm = require('node:vm');
 const handlers = {};
 let windows = [];
 let opened;
+let fetchOptions;
 class MessageChannel {
   constructor() {
     this.port1 = { close() {} };
@@ -13,7 +14,7 @@ class MessageChannel {
 vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname, '..', 'sw.js'), 'utf8'), {
   self: { location: { origin: 'https://app.test' }, addEventListener: (name, handler) => { handlers[name] = handler; },
     clients: { matchAll: async () => windows, openWindow: async url => { opened = url; } } },
-  URL, MessageChannel, setTimeout, clearTimeout,
+  URL, MessageChannel, setTimeout, clearTimeout, fetch:async(request,options)=>{fetchOptions=options;return {};},
 });
 async function click(id, appointment = false) {
   let work; let closed = false;
@@ -21,6 +22,9 @@ async function click(id, appointment = false) {
   await work; assert.ok(closed);
 }
 (async () => {
+  for(const [path,cache] of [['/assets/vendor/pro-workspace.js','no-cache'],['/icon-192.png','no-cache'],['/','no-store'],['/admin','no-store'],['/api/app?action=pro-cases','no-store'],['/data/catalog.json','no-store']]){
+    let response;handlers.fetch({request:{method:'GET',url:'https://app.test'+path},respondWith(promise){response=promise;}});await response;assert.equal(fetchOptions.cache,cache,path);
+  }
   await click('clicked-id'); assert.equal(opened, '/?announcement=clicked-id');
   windows = []; await click('appointment-id',true);assert.equal(opened,'/?appointment=appointment-id');
   windows=[{url:'https://app.test/',focus:async()=>{},postMessage(data,ports){assert.equal(data.type,'appointment');assert.equal(data.appointmentId,'appointment-id');ports[0].postMessage({handled:true});}}];

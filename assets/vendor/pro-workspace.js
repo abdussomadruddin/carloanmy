@@ -48,7 +48,15 @@
   let counts={},countPending=false;
   function badges(){for(const button of tabButtons){const badge=button.querySelector('.pro-mark');if(!badge)continue;const count=counts[button.dataset.tab]||0;badge.hidden=!!agent&&count===0;badge.textContent=agent?String(count):'PRO';badge.classList.toggle('pro-count',!!agent);}}
   async function refreshCounts(){if(!agent||!agent.active||countPending)return;countPending=true;try{const next=await api('pro-counts');if(agent){counts=next;badges();}}catch(error){if(error.status===401||error.status===403){live.stop();expired();}}finally{countPending=false;}}
-  async function api(action,body,params=''){
+  const pendingReads=new Map();
+  function api(action,body,params=''){
+    if(body!==undefined){pendingReads.clear();return requestApi(action,body,params).finally(()=>pendingReads.clear());}
+    const key=action+params;
+    if(pendingReads.has(key))return pendingReads.get(key);
+    const request=requestApi(action,body,params).finally(()=>{if(pendingReads.get(key)===request)pendingReads.delete(key);});
+    pendingReads.set(key,request);return request;
+  }
+  async function requestApi(action,body,params=''){
     const request=fetch('/api/app?action='+action+params,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)}),cache:'no-store'});
     const response=await (window.CarLoanBoot?.wait(request)||request);
     const data=await response.json();if(!response.ok){const error=new Error(data.error||data.message||'Sambungan gagal. Cuba lagi.');error.status=response.status;throw error;}return data;

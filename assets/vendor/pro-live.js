@@ -29,7 +29,7 @@
     function schedule(){if(retry||!active)return;retry=setTimeout(()=>{retry=null;connect();},Math.min(30000,1000*2**Math.min(attempt++,5)));}
     function start(){if(active)return;active=true;epoch++;connect();}
     function stop(){active=false;epoch++;clearTimeout(retry);retry=null;disconnect();}
-    function resume(){if(active&&!document.hidden){connect();changed();}}
+    function resume(){if(active&&!document.hidden){if(!client?.isConnected?.())connect();changed();}}
     document.addEventListener('visibilitychange',()=>{if(document.hidden){epoch++;disconnect();}else resume();});
     addEventListener('online',resume);addEventListener('pageshow',resume);
     // Reconcile missed events and time-based follow-up/badge changes as well as renewing JWTs.

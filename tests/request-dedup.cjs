@@ -1,0 +1,20 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const source=fs.readFileSync('assets/vendor/pro-workspace.js','utf8');
+const code=source.slice(source.indexOf('  const pendingReads='),source.indexOf('  const message='));
+let requests=[];
+const context={window:{},Map,Error,JSON,fetch:(url,options)=>new Promise(resolve=>requests.push({url,options,resolve}))};
+vm.createContext(context);vm.runInContext(code+';this.api=api;',context);
+const finish=(index,ok=true)=>requests[index].resolve({ok,status:ok?200:503,json:async()=>ok?{records:[]}:{error:'temporary'}});
+(async()=>{
+  const first=context.api('pro-cases'),second=context.api('pro-cases');
+  assert.equal(first,second);assert.equal(requests.length,1);finish(0);await first;
+  const fresh=context.api('pro-cases');assert.equal(requests.length,2);finish(1);await fresh;
+  const old=context.api('pro-cases'),write=context.api('pro-case-save',{id:'a'});
+  const after=context.api('pro-cases');assert.equal(requests.length,5);assert.notEqual(old,after);
+  finish(2);finish(3);finish(4);await Promise.all([old,write,after]);
+  const failure=context.api('pro-cases');finish(5,false);await assert.rejects(failure);
+  const retry=context.api('pro-cases');assert.equal(requests.length,7);finish(6);await retry;
+  console.log('PASS request coalescing: concurrent reads only, no cached responses, mutation invalidation and failed-read retry.');
+})().catch(error=>{console.error(error);process.exitCode=1;});

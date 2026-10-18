@@ -35,7 +35,8 @@ const sdk=`window.liveClients=[];window.CarLoanRealtime={RealtimeClient:class{co
   await page.evaluate(()=>{document.activeElement.blur();scrollTo(0,0)});await page.waitForTimeout(350);await page.getByRole('tab',{name:/^Follow Up/}).click();await page.locator('.pro-record').first().waitFor();records=records.map(r=>({...r,status:'Delivered'}));await page.evaluate(()=>emitLive('car_agent_cases'));await page.waitForFunction(()=>document.querySelectorAll('.pro-record').length===0);
   await page.getByRole('tab',{name:/^Appointment/}).click();await page.getByText('Tiada rekod.',{exact:true}).waitFor();meetings=[{id:'meeting',name:'New appointment',phone:seed.phone,status:'Scheduled',type:'Delivery',starts_at:new Date(Date.now()+86400000).toISOString(),location:'Showroom',notes:''}];await page.evaluate(()=>emitLive('car_agent_appointments'));await page.getByRole('heading',{name:'New appointment',exact:true}).waitFor();
   announcement={id:'live-announcement',title:'Realtime announcement',message:'New official announcement'};await page.evaluate(()=>emitLive('car_live_signals'));await page.getByRole('heading',{name:'Realtime announcement',exact:true}).waitFor();await page.locator('#dialogClose').click();
-  await page.evaluate(()=>dispatchEvent(new Event('online')));await page.waitForTimeout(500);assert.deepEqual(errors,[]);
+  const connectedClients=await page.evaluate(()=>{CarLoanRealtime.RealtimeClient.prototype.isConnected=()=>true;return liveClients.length;});
+  await page.evaluate(()=>dispatchEvent(new Event('online')));await page.waitForTimeout(500);assert.equal(await page.evaluate(()=>liveClients.length),connectedClients,'healthy sockets are reused on resume');assert.deepEqual(errors,[]);
   console.log('PASS realtime UI: cross-device cases/appointments, badges, follow-up, announcements, preserved search/drafts, network failure and reconnect.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

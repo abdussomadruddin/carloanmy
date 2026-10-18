@@ -22,7 +22,7 @@ async function click(id, appointment = false) {
   await work; assert.ok(closed);
 }
 (async () => {
-  for(const [path,cache] of [['/assets/vendor/pro-workspace.js','no-cache'],['/icon-192.png','no-cache'],['/','no-store'],['/admin','no-store'],['/api/app?action=pro-cases','no-store'],['/data/catalog.json','no-store']]){
+  for(const [path,cache] of [['/assets/vendor/lucide-123456abcdef.js','default'],['/assets/vendor/pro-workspace.js','no-cache'],['/icon-192.png','no-cache'],['/','no-store'],['/admin','no-store'],['/api/app?action=pro-cases','no-store'],['/data/catalog.json','no-store']]){
     let response;handlers.fetch({request:{method:'GET',url:'https://app.test'+path},respondWith(promise){response=promise;}});await response;assert.equal(fetchOptions.cache,cache,path);
   }
   await click('clicked-id'); assert.equal(opened, '/?announcement=clicked-id');

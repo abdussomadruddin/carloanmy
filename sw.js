@@ -6,7 +6,8 @@ self.addEventListener('fetch', event => {
   if (event.request.method === 'GET' && new URL(event.request.url).origin === self.location.origin) {
     const path = new URL(event.request.url).pathname;
     const staticAsset = !path.startsWith('/api/') && !path.startsWith('/admin') && (/\.(?:png|jpg|jpeg|webp|svg|ico|woff2?)$/i.test(path) || path.startsWith('/assets/vendor/'));
-    event.respondWith(fetch(event.request, { cache: staticAsset ? 'no-cache' : 'no-store' }));
+    const versionedAsset = /^\/assets\/vendor\/lucide-[a-f0-9]{12}\.js$/.test(path);
+    event.respondWith(fetch(event.request, { cache: versionedAsset ? 'default' : staticAsset ? 'no-cache' : 'no-store' }));
   }
 });
 self.addEventListener('push', event => {

@@ -1,5 +1,4 @@
 const crypto = require('node:crypto');
-const webpush = require('web-push');
 
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const cookieName = '__Host-carloan-admin';
@@ -103,6 +102,7 @@ function uuid(value) {
   return value;
 }
 async function broadcast(id) {
+  const webpush = require('web-push');
   const { data: announcements } = await supabase('/rest/v1/car_announcements?id=eq.' + id + '&select=*');
   const announcement = announcements?.[0];
   if (!announcement || !announcement.active) fail(409, 'Hebahan mesti aktif sebelum dihantar.');

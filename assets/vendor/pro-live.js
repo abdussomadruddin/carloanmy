@@ -15,7 +15,7 @@
         channel=client.channel(action+'-'+(config.ownerId||'updates'));
         const subscriptions=config.subscriptions||['car_agent_cases','car_agent_appointments'].map(table=>({table,filter:'owner_id=eq.'+config.ownerId}));
         for(const subscription of subscriptions){
-          for(const event of ['INSERT','UPDATE'])channel.on('postgres_changes',{event,schema:'public',...subscription},()=>{if(active&&version===epoch)changed();});
+          for(const event of ['INSERT','UPDATE'])channel.on('postgres_changes',{event,schema:'public',...subscription},payload=>{if(active&&version===epoch)changed(payload);});
         }
         channel.on('system',{},event=>{if(active&&version===epoch&&event.status==='ok')changed();});
         channel.subscribe(status=>{

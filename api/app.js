@@ -250,24 +250,8 @@ module.exports = async function handler(req, res) {
     if(action==='admin-realtime'&&req.method==='GET') return res.status(200).json({url:process.env.SUPABASE_URL,key:process.env.SUPABASE_PUBLISHABLE_KEY,accessToken:user.realtimeToken,subscriptions:[{table:'car_live_signals',filter:'topic=eq.admin'}]});
     if (typeof action === 'string' && action.startsWith('manage-agent-')) return await require('../lib/agents.cjs')(req,res,{supabase,fail,uuid,adminEmail:process.env.ADMIN_EMAIL});
     if (action === 'agent-stats' && req.method === 'GET') {
-      const now = new Date(), cutoff = now.toISOString(), firstRecorded = new Map();
-      // A WhatsApp is counted on its first record, not on every poster download.
-      for (let offset = 0; ; offset += 500) {
-        const { data } = await supabase('/rest/v1/car_download_requests?select=created_at,whatsapp&created_at=lte.' + encodeURIComponent(cutoff) + '&order=created_at.asc,id.asc&limit=500&offset=' + offset);
-        for (const row of data) {
-          const time = new Date(row.created_at).getTime();
-          if (!Number.isFinite(time)) continue;
-          const previous = firstRecorded.get(row.whatsapp);
-          if (previous === undefined || time < previous) firstRecorded.set(row.whatsapp, time);
-        }
-        if (data.length < 500) break;
-      }
-      const malaysiaDay = time => new Date(time + 8 * 3600000).toISOString().slice(0, 10);
-      const today = malaysiaDay(now.getTime());
-      const daily = Array.from({ length: 30 }, (_, i) => ({ date: new Date(Date.parse(today + 'T00:00:00Z') - (29 - i) * 86400000).toISOString().slice(0, 10), count: 0 }));
-      const counts = new Map(daily.map(day => [day.date, day]));
-      for (const time of firstRecorded.values()) { const day = counts.get(malaysiaDay(time)); if (day) day.count++; }
-      return res.status(200).json({ total: firstRecorded.size, daily, checkedAt: cutoff });
+      const { data } = await supabase('/rest/v1/rpc/car_admin_agent_totals', { method: 'POST', body: {} });
+      return res.status(200).json(data);
     }
     if (action === 'downloads' && req.method === 'GET') {
       const page = Number(req.query.page || 1);
@@ -304,28 +288,8 @@ module.exports = async function handler(req, res) {
       return res.status(200).json(data);
     }
     if (action === 'admin' && req.method === 'GET') {
-      const { data } = await supabase('/rest/v1/car_announcements?select=*&order=created_at.desc&limit=40');
-      let activeSubscriptions = 0;
-      for (let offset = 0; ; offset += 500) {
-        const { data: rows } = await supabase('/rest/v1/car_push_subscriptions?enabled=eq.true&select=id&order=id.asc&limit=500&offset=' + offset);
-        activeSubscriptions += rows.length;
-        if (rows.length < 500) break;
-      }
-      const summaries = new Map(data.map(a => [a.id, { sent: 0, failed: 0, processing: 0, total: 0, lastUpdated: null }]));
-      if (data.length) {
-        for (let offset = 0; ; offset += 500) {
-          const { data: rows } = await supabase('/rest/v1/car_push_deliveries?announcement_id=in.(' + data.map(a => a.id).join(',') + ')&select=announcement_id,state,updated_at,subscription_id&order=announcement_id.asc,subscription_id.asc&limit=500&offset=' + offset);
-          for (const row of rows) {
-            const summary = summaries.get(row.announcement_id);
-            if (!summary) continue;
-            summary.total++;
-            if (['sent', 'failed', 'processing'].includes(row.state)) summary[row.state]++;
-            if (!summary.lastUpdated || Date.parse(row.updated_at) > Date.parse(summary.lastUpdated)) summary.lastUpdated = row.updated_at;
-          }
-          if (rows.length < 500) break;
-        }
-      }
-      return res.status(200).json({ email: user.email, announcements: data.map(a => ({ ...a, delivery: summaries.get(a.id) })), activeSubscriptions, pushReady: pushReady() });
+      const { data } = await supabase('/rest/v1/rpc/car_admin_announcement_summary', { method: 'POST', body: {} });
+      return res.status(200).json({ email: user.email, ...data, pushReady: pushReady() });
     }
     if (action === 'publish') {
       requirePost(req);

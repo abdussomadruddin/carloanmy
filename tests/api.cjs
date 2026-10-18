@@ -16,9 +16,7 @@ test('admin delivery status is read-only, private and includes inactive announce
   global.fetch = async (url, options) => {
     calls.push({url, method:options.method});
     if (url.endsWith('/auth/v1/user')) return new Response(JSON.stringify({email:process.env.ADMIN_EMAIL,email_confirmed_at:'2026-10-01'}));
-    if (url.includes('/car_announcements?')) return new Response(JSON.stringify([{id,active:false}]));
-    if (url.includes('/car_push_subscriptions?')) return new Response(JSON.stringify([{id:'one'},{id:'two'}]));
-    if (url.includes('/car_push_deliveries?')) return new Response(JSON.stringify(['sent','failed','processing'].map((state,i)=>({announcement_id:id,state,updated_at:`2026-10-04T08:00:0${i}Z`}))));
+    if (url.endsWith('/rpc/car_admin_announcement_summary')) return new Response(JSON.stringify({activeSubscriptions:2,announcements:[{id,active:false,delivery:{sent:1,failed:1,processing:1,total:3,lastUpdated:'2026-10-04T08:00:02Z'}}]}));
     throw new Error('Unexpected write or query');
   };
   assert.equal((await request('admin')).code,401);
@@ -26,7 +24,7 @@ test('admin delivery status is read-only, private and includes inactive announce
   assert.equal(res.code,200);
   assert.equal(res.data.activeSubscriptions,2);
   assert.deepEqual(res.data.announcements[0].delivery,{sent:1,failed:1,processing:1,total:3,lastUpdated:'2026-10-04T08:00:02Z'});
-  assert.ok(calls.every(call=>call.method==='GET'));
+  assert.equal(calls.length,2);assert.ok(calls.every(call=>call.method==='GET'||call.url.endsWith('/rpc/car_admin_announcement_summary')));
 });
 test('silent readiness check requires admin and never sends push', async () => {
   assert.equal((await request('push-readiness')).code,401);
@@ -172,29 +170,22 @@ test('only authenticated admin can retrieve aggregated statistics', async () => 
   const response = await request('stats', { cookie: '__Host-carloan-admin=valid.jwt.token' });
   assert.equal(response.code, 200); assert.equal(response.data.notifications, 5);
 });
-test('agent totals count unique WhatsApps at first record across pages and Malaysia days', async () => {
+test('agent totals read one private aggregate without downloading contact records', async () => {
   const today = new Date(Date.now()+8*3600000).toISOString().slice(0,10);
-  const recent = today+'T00:00:00+08:00';
-  const old = new Date(Date.now()-60*86400000).toISOString();
-  const rows = Array.from({length:500},()=>({created_at:old,whatsapp:'+60111111111'}));
-  rows.push({created_at:recent,whatsapp:'+60111111111'},{created_at:recent,whatsapp:'+60122222222'});
-  let pages=0;
-  global.fetch = async url => {
+  const daily=Array.from({length:30},(_,i)=>({date:new Date(Date.parse(today+'T00:00:00Z')-(29-i)*86400000).toISOString().slice(0,10),count:i===29?1:0}));
+  let calls=0;
+  global.fetch = async (url,opts) => {
     if(url.endsWith('/auth/v1/user')) return new Response(JSON.stringify({email:process.env.ADMIN_EMAIL,email_confirmed_at:'2026-09-30'}));
-    const parsed=new URL(url);
-    assert.ok(parsed.pathname.endsWith('/car_download_requests'));
-    assert.equal(parsed.searchParams.get('select'),'created_at,whatsapp');
-    assert.ok(parsed.searchParams.get('created_at').startsWith('lte.'));
-    const offset=Number(parsed.searchParams.get('offset')); pages++;
-    return new Response(JSON.stringify(rows.slice(offset,offset+500)));
+    assert.ok(url.endsWith('/rpc/car_admin_agent_totals'));assert.equal(opts.method,'POST');calls++;
+    return new Response(JSON.stringify({total:2,daily,checkedAt:new Date().toISOString()}));
   };
   const res=await request('agent-stats',{cookie:'__Host-carloan-admin=valid.jwt.token'});
-  assert.equal(res.code,200); assert.equal(pages,2); assert.equal(res.data.total,2);
+  assert.equal(res.code,200); assert.equal(calls,1); assert.equal(res.data.total,2);
   assert.equal(res.data.daily.length,30); assert.equal(res.data.daily.at(-1).date,today);
   assert.equal(res.data.daily.at(-1).count,1);
   assert.equal(res.data.daily.reduce((n,d)=>n+d.count,0),1);
   assert.ok(!JSON.stringify(res.data).includes('+601'));
-  global.fetch=async url=>url.endsWith('/auth/v1/user')?new Response(JSON.stringify({email:process.env.ADMIN_EMAIL,email_confirmed_at:'2026-09-30'})):new Response('[]');
+  global.fetch=async url=>url.endsWith('/auth/v1/user')?new Response(JSON.stringify({email:process.env.ADMIN_EMAIL,email_confirmed_at:'2026-09-30'})):new Response(JSON.stringify({total:0,daily:daily.map(d=>({...d,count:0}))}));
   const empty=await request('agent-stats',{cookie:'__Host-carloan-admin=valid.jwt.token'});
   assert.equal(empty.data.total,0); assert.ok(empty.data.daily.every(d=>d.count===0));
 });

@@ -78,6 +78,7 @@
       if(id==='comparison'){pane.replaceChildren();heading('Comparison','git-compare-arrows');const capture=button('Gunakan kiraan calculator semasa',()=>{comparison.replaceChildren();window.carComparison.mount(comparison);icons();});pane.append(capture);if(!comparison){comparison=el('div','pro-comparison');window.carComparison.mount(comparison);}pane.append(comparison);icons();return;}
       const result=await api(id==='appointment'?'pro-appointments':'pro-cases');if(version!==generation)return;
       if(id==='appointment'){appointments=result.records;const cases=await api('pro-cases');if(version!==generation)return;records=cases.records;}else records=result.records;
+      if(!livePending)fullSync=false;
       if(!pane.contains(document.activeElement))render();linkDevice();refreshCounts();
     }catch(error){if(version!==generation)return;if(error.status===401){live.stop();agent=null;counts={};badges();auth();}else{pane.replaceChildren();heading(tabs.find(t=>t[0]===id)[1],tabs.find(t=>t[0]===id)[2]);message(error.message,'pro-error');pane.append(button('Cuba semula',()=>select(id)));}}
   }
@@ -136,24 +137,40 @@
   window.proWorkspace={select,isFollowUp:due,openProfile:()=>{if(agent){window.agentProfile.open();return;}authMode='register';current='case';generation++;positionLens(current);nav.querySelectorAll('button').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.tab===current)));workspace.hidden=true;pane.hidden=false;revealTabs();auth();}};icons();
   addEventListener('carloan-notification-synced',()=>{if(agent)linkDevice();});
   navigator.serviceWorker?.addEventListener('message',event=>{if(['appointment','followup'].includes(event.data?.type)){event.ports?.[0]?.postMessage({handled:true});select(event.data.type==='followup'?'followup':'appointment');}});
-  let refreshing=false,livePending=false,liveTimer=null;
+  let refreshing=false,livePending=false,liveTimer=null,fullSync=true;
+  const changedRows=new Map();
   function editing(){return Boolean(document.querySelector('dialog[open]'))||Boolean(pane.querySelector('.pro-list')?.contains(document.activeElement))||Array.from(pane.querySelectorAll('.pro-quick-case')).some(form=>form.querySelector('button').disabled||form.querySelector('textarea').value!==form.dataset.remark||form.querySelector('select').value!==form.dataset.status);}
-  function requestSync(){livePending=true;dispatchEvent(new Event('carloan-pro-live'));clearTimeout(liveTimer);liveTimer=setTimeout(syncLive,150);}
+  function requestSync(payload){
+    const id=payload?.new?.id||payload?.old?.id,table=payload?.table;
+    if(['car_agent_cases','car_agent_appointments'].includes(table)&&/^[a-f0-9-]{36}$/i.test(id||''))changedRows.set(table+':'+id,{table,id});
+    else fullSync=true;
+    livePending=true;dispatchEvent(new Event('carloan-pro-live'));clearTimeout(liveTimer);liveTimer=setTimeout(syncLive,150);
+  }
   function expired(){agent=null;counts={};records=[];appointments=[];document.querySelectorAll('.pro-editor[open]').forEach(dialog=>dialog.close());badges();if(current!=='calculator')auth();}
   const live=window.CarLoanLive(api,requestSync,expired);
   async function syncLive(){
     if(!agent||!agent.active||document.hidden||refreshing)return;
-    refreshCounts();if(!['case','followup','appointment'].includes(current)){livePending=false;return;}
+    refreshCounts();if(!['case','followup','appointment'].includes(current)){livePending=false;fullSync=true;changedRows.clear();return;}
     if(editing())return;
-    refreshing=true;livePending=false;const version=generation;
+    refreshing=true;livePending=false;const version=generation,changes=[...changedRows.values()];changedRows.clear();
+    const reload=fullSync||changes.length>20||records.length>=1000||appointments.length>=1000;fullSync=false;
     try{
-      const cases=await api('pro-cases');const meetings=current==='appointment'?await api('pro-appointments'):null;
+      let nextCases=records,nextMeetings=appointments;
+      if(reload){nextCases=(await api('pro-cases')).records;if(current==='appointment')nextMeetings=(await api('pro-appointments')).records;}
+      else for(const change of changes){
+        if(change.table==='car_agent_appointments'&&current!=='appointment')continue;
+        const isCase=change.table==='car_agent_cases';
+        const result=await api(isCase?'pro-cases':'pro-appointments',undefined,'&id='+encodeURIComponent(change.id));
+        const rows=(isCase?nextCases:nextMeetings).filter(row=>row.id!==change.id).concat(result.records);
+        rows.sort((a,b)=>isCase?Date.parse(b.activity_at)-Date.parse(a.activity_at):Date.parse(a.starts_at)-Date.parse(b.starts_at));
+        if(isCase)nextCases=rows;else nextMeetings=rows;
+      }
       if(version!==generation||!agent)return;
-      if(editing()){livePending=true;return;}
-      const changed=JSON.stringify(records)!==JSON.stringify(cases.records)||meetings&&JSON.stringify(appointments)!==JSON.stringify(meetings.records);
-      records=cases.records;if(meetings)appointments=meetings.records;if(changed||current==='followup')redrawLive?.();
-    }catch(error){if(version===generation&&(error.status===401||error.status===403)){live.stop();expired();}}
-    finally{refreshing=false;if(livePending&&!editing())requestSync();}
+      if(editing()){livePending=true;fullSync=true;return;}
+      const changed=JSON.stringify(records)!==JSON.stringify(nextCases)||JSON.stringify(appointments)!==JSON.stringify(nextMeetings);
+      records=nextCases;appointments=nextMeetings;if(changed||current==='followup')redrawLive?.();
+    }catch(error){fullSync=true;if(version===generation&&(error.status===401||error.status===403)){live.stop();expired();}}
+    finally{refreshing=false;if(livePending&&!editing()){clearTimeout(liveTimer);liveTimer=setTimeout(syncLive,150);}}
   }
   document.addEventListener('focusout',()=>{if(livePending)requestSync();});
   document.addEventListener('close',()=>{if(livePending)requestSync();},true);

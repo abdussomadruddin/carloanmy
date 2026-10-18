@@ -6,9 +6,9 @@ Object.assign(process.env,{SUPABASE_URL:'https://test.supabase.co',SUPABASE_SERV
 after(()=>{global.fetch=originalFetch;process.env=env;});
 const user={id:'11111111-1111-4111-8111-111111111111',email:'agent@test.example',email_confirmed_at:'2026-01-01'};
 const id='33333333-3333-4333-8333-333333333333';
-async function request(action,{body,method=body?'POST':'GET',cookie='__Host-carloan-agent=access-token',origin='https://carloanmalaysia.vercel.app',authorization,native=false}={}){
+async function request(action,{body,method=body?'POST':'GET',cookie='__Host-carloan-agent=access-token',origin='https://carloanmalaysia.vercel.app',authorization,native=false,id:queryID}={}){
   const req=native?new (require('node:http').IncomingMessage)(new (require('node:net').Socket)()):{};
-  Object.assign(req,{query:{action},method,body,headers:{origin,cookie,authorization,'content-type':'application/json'}});
+  Object.assign(req,{query:{action,id:queryID},method,body,headers:{origin,cookie,authorization,'content-type':'application/json'}});
   const res={headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},json(data){this.data=data;return this;}};
   await handler(req,res);return res;
 }
@@ -58,14 +58,25 @@ test('realtime credentials are owner-scoped and never disclose refresh or servic
   const publicResult=await request('public-realtime',{cookie:''});assert.equal(publicResult.code,200);assert.ok(!publicResult.data.accessToken);assert.deepEqual(publicResult.data.subscriptions,[{table:'car_live_signals',filter:'topic=eq.announcements'}]);
   assert.equal((await request('admin-realtime')).code,401,'Agent cookie cannot obtain admin realtime credentials');
 });
-test('tab badges count exact private rows and apply follow-up and appointment filters',async()=>{
+test('single-record reconciliation validates IDs and retains owner JWT/RLS',async()=>{
+  global.fetch=async(url,opts)=>{
+    assert.equal(opts.headers.apikey,'public-key');assert.equal(opts.headers.Authorization,'Bearer access-token');
+    if(url.endsWith('/auth/v1/user'))return new Response(JSON.stringify(user));
+    assert.ok(url.includes('&id=eq.'+id));assert.ok(!url.includes('select=*'));return new Response('[]');
+  };
+  for(const action of ['pro-cases','pro-appointments']){
+    assert.equal((await request(action,{id})).code,200);
+    assert.equal((await request(action,{id:'bad&owner_id=other'})).code,400);
+  }
+});
+test('tab badges use one owner-scoped aggregate RPC instead of three reads',async()=>{
   const paths=[];global.fetch=async(url,opts)=>{
     assert.equal(opts.headers.apikey,'public-key');assert.equal(opts.headers.Authorization,'Bearer access-token');
     if(url.endsWith('/auth/v1/user'))return new Response(JSON.stringify(user));
-    paths.push(url);assert.equal(opts.headers.Prefer,'count=exact');assert.ok(url.includes('limit=0'));
-    return new Response('[]',{headers:{'content-range':'*/'+[1200,3,0][paths.length-1]}});
+    paths.push(url);assert.ok(url.endsWith('/rpc/car_agent_counts'));assert.equal(opts.method,'POST');assert.deepEqual(JSON.parse(opts.body),{});
+    return new Response(JSON.stringify({case:1200,followup:3,appointment:0}));
   };
-  const result=await request('pro-counts');assert.equal(result.code,200);assert.deepEqual(result.data,{case:1200,followup:3,appointment:0});assert.ok(paths[1].includes('status=not.in.(Rejected,Delivered,Cancelled)'));assert.ok(paths[1].includes('activity_at=lte.'));assert.ok(paths[2].includes('status=eq.Scheduled'));assert.ok(paths[2].includes('starts_at=gte.'));
+  const result=await request('pro-counts');assert.equal(result.code,200);assert.deepEqual(result.data,{case:1200,followup:3,appointment:0});assert.equal(paths.length,1);
   assert.equal((await request('pro-counts',{cookie:''})).code,401);
 });
 test('case validation, owner assigned server-side and forbidden statuses rejected',async()=>{
@@ -75,6 +86,19 @@ test('case validation, owner assigned server-side and forbidden statuses rejecte
   for(const status of ['Waiting ehakmilik','Grant & roadtax collected','Fake'])assert.equal((await request('pro-case-save',{body:{...body,status}})).code,400);
   assert.equal((await request('pro-case-save',{body:{...body,phone:'123'}})).code,400);
   assert.equal((await request('pro-case-save',{body,origin:'https://evil.test'})).code,403);
+});
+test('unchanged case and profile saves do not rewrite rows or auth metadata',async()=>{
+  const body={id,name:'Agent',phone:'+60173559147',brand:'Proton',model:'S70',variant:'Lite',color:'White',remark:'Ready',status:'Submission'};
+  const writes=[];
+  global.fetch=async(url,opts)=>{
+    if(url.endsWith('/auth/v1/user'))return new Response(JSON.stringify({...user,user_metadata:{name:'Agent',whatsapp:body.phone,carloan_pro:true}}));
+    if(url.includes('/rpc/car_save_download'))return new Response('true');
+    if(opts.method==='PATCH'||opts.method==='PUT')writes.push(url);
+    return new Response(JSON.stringify([{...body,agent_deleted_at:null}]));
+  };
+  assert.equal((await request('pro-case-save',{body})).code,200);
+  assert.equal((await request('pro-profile-save',{body:{id,name:'Agent',phone:body.phone}})).code,200);
+  assert.equal(writes.length,0);
 });
 test('appointment validates timezone, future time and type; cron rejects missing or wrong secret',async()=>{
   let saved;global.fetch=async(url,opts)=>{if(url.endsWith('/auth/v1/user'))return new Response(JSON.stringify(user));if(opts.method==='POST')saved=JSON.parse(opts.body);return new Response('[]');};

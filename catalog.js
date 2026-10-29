@@ -1,6 +1,6 @@
-// Snapshot of official Malaysian sources checked on 30 September 2026.
+// Official Malaysian price snapshot; model-level dates retain unresolved older checks.
 // Rows preserve published selling prices for audit; app Body Price uses retail/OTR excluding insurance.
-const CATALOG_CHECKED_AT = "2026-09-30";
+const CATALOG_CHECKED_AT = "2026-10-29";
 function catalogModel(name, source, rows, options = {}) {
   return {
     name, source, checkedAt: CATALOG_CHECKED_AT, ...options,
@@ -18,7 +18,7 @@ const hondaPrice = (slug) => `https://www.honda.com.my/model/${slug}/pricing`;
 const mitsubishiPdf = (file) => `https://www.mitsubishi-motors.com.my/wp-content/uploads/pricelist/${file}-pricelist-pm.pdf`;
 const mazdaPdf = (year, file) => `https://kentico.mazda.com.my/PriceList/WestMalaysia/${year}/${file}_Price(W).pdf`;
 const bydPdf = (file) => `https://byd.simemotors.my/pub/media/wysiwyg/2026-spec-price/BYD_26_${file}_Brochure_WM.pdf`;
-const NEW_BRAND_CHECKED_AT = "2026-10-02";
+const NEW_BRAND_CHECKED_AT = "2026-10-29";
 // verifiedThrough is our revalidation cutoff, not an advertised promotion expiry.
 const launchOffer = (amount, source) => ({ rebate: { amount, source, label: "Harga pengenalan rasmi; tertakluk syarat dan stok.", verifiedThrough: "2026-09-30" } });
 const CAR_CATALOG = {
@@ -98,9 +98,9 @@ const CAR_CATALOG = {
       ["1.5L E", 89560, 89900], ["1.5L V", 94560, 94900], ["1.5L RS", 99560, 99900], ["1.5L e:HEV RS", 111560, 111900],
     ], { paintNote: "Platinum White Pearl / Blazing Red Pearl: +RM400." }),
     catalogModel("City Hatchback", hondaPrice("city-hatchback"), [
-      ["1.5L S", 85560, 85900], ["1.5L E", 90560, 90900], ["1.5L V", 95560, 95900],
+      ["1.5L V", 95560, 95900],
       ["1.5L RS", 100560, 100900], ["1.5L e:HEV RS", 112560, 112900],
-    ], { paintNote: "Platinum White Pearl / Ignite Red Metallic: +RM400.", note: "Jadual rasmi ada percanggahan caj number plate; jumlah selling dan retail rasmi digunakan tanpa menambah caj itu sekali lagi." }),
+    ], { effectiveAt: "2026-10-19", paintNote: "Platinum White Pearl / Blazing Red Pearl: +RM400.", note: "Lineup rasmi terkini: V, RS dan e:HEV RS. Jumlah selling dan retail rasmi digunakan tanpa menambah caj number plate sekali lagi." }),
     catalogModel("Civic", hondaPrice("civic"), [
       ["1.5L E", 133560, 133900], ["1.5L V", 144560, 144900], ["1.5L RS", 149560, 149900], ["2.0L e:HEV RS", 167123.5, 167900],
     ], { paintNote: "Platinum White Pearl / Ignite Red / Canyon River Blue: +RM800." }),
@@ -167,13 +167,16 @@ const CAR_CATALOG = {
     catalogModel("C9", "https://www.omodajaecoo.com.my/modelc9", [
       ["2.0 TGDI 2WD", 167930.8, 168800, { source: jaecooPdf("C9_pricelist_2WD_PM"), note: "Matte Grey: +RM3,000." }],
       ["2.0 TGDI AWD", 187930.8, 188800, { source: jaecooPdf("C9_pricelist_AWD_PM_new"), note: "Matte Grey / Matte Black: +RM3,000." }],
-    ], { checkedAt: "2026-10-03", effectiveAt: "2024-12-06" }),
+    ], { checkedAt: CATALOG_CHECKED_AT, effectiveAt: "2024-12-06" }),
     catalogModel("C9 PHEV", jaecooPdf("C9_PHEV_Pricelist_PM_August"), [
       ["1.5T SHS-P 3 DHT AWD", 208400, 208800],
-    ], { checkedAt: "2026-10-03", effectiveAt: "2026-08-01", powertrain: "PHEV", paintNote: "Matte Grey: +RM3,000." }),
+    ], { checkedAt: CATALOG_CHECKED_AT, effectiveAt: "2026-08-01", powertrain: "PHEV", paintNote: "Matte Grey: +RM3,000." }),
   ],
   Chery: [
-    catalogModel("Tiggo Cross", cheryPdf("2025/07", "PM_Tiggo-Cross-Pricelists"), [["1.5 Turbo", 88400, 88800], ["1.5 Hybrid CSH", 99400, 99800]], { effectiveAt: "2025-07-09" }),
+    catalogModel("Tiggo Cross", cheryPdf("2026/10", "PM_Tiggo_Cross_Pricelist_070102026_FA"), [
+      ["1.5 Turbo", 88400, 88800], ["1.5 Hybrid CSH", 99400, 99800],
+      ["1.5 Turbo Sport Edition", 88400, 91800, { note: "Harga OTR sudah termasuk Sport Edition Aerokit RM3,000; jangan tambah sekali lagi dalam aksesori." }],
+    ], { effectiveAt: "2026-10-07" }),
     catalogModel("Chery O5", cheryPdf("2025/09", "CHERY.MY_Chery-O5-Pricelist_PM"), [["1.5 Turbo", 116400, 116800]], { effectiveAt: "2025-09-10" }),
     catalogModel("Omoda E5", cheryPdf("2026/01", "Omoda-E5_PM_-Pricelist_-01012026"), [["150kW", 146370, 146978]], { powertrain: "EV", effectiveAt: "2026-01-01", paintNote: "Aqua Green / Khaki White dengan Black Roof: +RM2,000." }),
     catalogModel("Tiggo 7 Pro", cheryPdf("2025/01", "T7P_PM_Pricelist_22122024"), [["1.6 TGDI", 123250, 123800]], { effectiveAt: "2024-06-21" }),
@@ -183,9 +186,9 @@ const CAR_CATALOG = {
     catalogModel("Tiggo 9", cheryPdf("2026/06", "CHERY.MY_Tiggo-9-PM-Pricelist_2026"), [["2.0 TGDI 7DCT AWD", 178930.8, 179800]], { effectiveAt: "2026-06-23" }),
   ],
   Jetour: [
-    catalogModel("Dashing", "https://jetour.com.my/models/wp-content/uploads/2026/01/JETOUR0005-Jetour-Dashing-Spec-Flyer-A4-Vertical-Peninsular.pdf", [["1.5 TCI Comfort", 109800, 110200], ["1.5 TCI Prime", 116800, 117200]], { effectiveAt: "2025-06-15" }),
-    catalogModel("VT9", "https://jetour.com.my/models/wp-content/uploads/2026/01/JETOUR0008-JETOUR-VT9-POSM_Spec-Sheet-Flyer_A4_Peninsular_Malaysia_Jan2026.pdf", [["1.5 TCI Comfort", 118800, 119200], ["1.5 TCI Prime", 123800, 124200]]),
-    catalogModel("T2", "https://jetour.com.my/models/wp-content/uploads/2026/03/JETOUR0041-Jetour-T2-Flyer_A4_Vertical.pdf", [["2.0 TGDI XWD", 156800, 157669.2]], { effectiveAt: "2026-03-13" }),
+    catalogModel("Dashing", "https://jetour.com.my/models/dashing/index_files/models/wp-content/uploads/2026/01/JETOUR0005-Jetour-Dashing-Spec-Flyer-A4-Vertical-Peninsular.pdf", [["1.5 TCI Comfort", 109800, 110200], ["1.5 TCI Prime", 116800, 117200]], { effectiveAt: "2025-06-15" }),
+    catalogModel("VT9", "https://jetour.com.my/models/vt9/index_files/models/wp-content/uploads/2026/01/JETOUR0008-JETOUR-VT9-POSM_Spec-Sheet-Flyer_A4_Peninsular_Malaysia_Jan2026.pdf", [["1.5 TCI Comfort", 118800, 119200], ["1.5 TCI Prime", 123800, 124200]]),
+    catalogModel("T2", "https://jetour.com.my/models/t2/index_files/models/wp-content/uploads/2026/03/JETOUR0041-Jetour-T2-Flyer_A4_Vertical.pdf", [["2.0 TGDI XWD", 156800, 157669.2]], { effectiveAt: "2026-03-13" }),
     catalogModel("T1", "https://jetour.com.my/models/t1/assets/files/t1/T1%20Est%20Price%20List%20PM%2022072026.pdf", [["1.5 TGDI 2WD", 129800, 130200], ["2.0 TGDI XWD", 146800, 147669.2]], { effectiveAt: "2026-07-22", estimated: true, note: "Pricelist rasmi bertanda Estimated. Sahkan harga akhir dengan pengedar sebelum mengeluarkan quotation." }),
     catalogModel("T2 i-DM", "https://jetour.com.my/models/t2-phev/assets/temp/JETOUR%20T2%20i-DM%20Price%20List%20(Peninsular%20Malaysia).pdf", [["1.5TD i-DM FWD", 162800, 163200]], { powertrain: "PHEV", effectiveAt: "2026-09-19", needsConfirmation: true, note: "PDF PM mempunyai label East Malaysia yang bercanggah; footer menyatakan kedua-dua wilayah. Harga bersih rasmi digunakan; sahkan caj pendaftaran dengan pengedar." }),
   ],
@@ -215,15 +218,15 @@ const CAR_CATALOG = {
     catalogModel("Mazda3 Sedan", mazdaPdf(2026, "Mazda3"), [
       ["1.5G High Plus", 119900, 120620, { effectiveAt: "2026-07-01" }],
       ["2.0G High Plus", 164900, 166059, { effectiveAt: "2026-05-01" }],
-    ], { checkedAt: NEW_BRAND_CHECKED_AT }),
+    ], { checkedAt: "2026-10-02" }),
     catalogModel("Mazda3 Liftback", mazdaPdf(2026, "Mazda3"), [
       ["1.5G High Plus", 119900, 120620, { effectiveAt: "2026-07-01" }],
       ["2.0G High Plus", 164900, 166059, { effectiveAt: "2026-05-01" }],
       ["2.0G Ignite Edition", 173900, 175059, { effectiveAt: "2026-05-01" }],
-    ], { checkedAt: NEW_BRAND_CHECKED_AT }),
+    ], { checkedAt: "2026-10-02" }),
     catalogModel("MX-5 RF", mazdaPdf(2025, "MazdaMX5"), [
       ["2.0G Manual", 293000, 294154], ["2.0G Auto", 295000, 296154],
-    ], { checkedAt: NEW_BRAND_CHECKED_AT, effectiveAt: "2025-04-09" }),
+    ], { checkedAt: "2026-10-02", effectiveAt: "2025-04-09" }),
     catalogModel("CX-30", mazdaPdf(2026, "MazdaCX30"), [
       ["2.0G Standard 2WD MY25", 121300, 122409],
       ["2.0G High 2WD MY26", 129300, 130409],
@@ -232,37 +235,40 @@ const CAR_CATALOG = {
     ], { checkedAt: NEW_BRAND_CHECKED_AT, effectiveAt: "2026-05-12", paintNote: "Soul Red Crystal / Machine Gray: +RM2,000.", note: "OTR rasmi sebelum pakej Accessories Installed RM3,410 yang disenaraikan berasingan; tambah pakej jika dipilih dalam aksesori tambahan." }),
     catalogModel("All New CX-5", mazdaPdf(2026, "MazdaCX5"), [
       ["2.5G High CBU", 169900, 171510.4],
-    ], { checkedAt: NEW_BRAND_CHECKED_AT, effectiveAt: "2026-09-01" }),
+    ], { checkedAt: "2026-10-02", effectiveAt: "2026-09-01" }),
     catalogModel("CX-5 CKD", mazdaPdf(2026, "MazdaCX5"), [
       ["2.0G Mid 2WD MY26", 134300, 135469.2],
       ["2.0G High 2WD MY26", 146300, 147469.2],
       ["2.5G High 2WD MY26", 163400, 164960.4],
       ["2.5G High 2WD MY25", 153400, 154960.4, { effectiveAt: "2026-01-01" }],
       ["2.5G Turbo High AWD MY25", 165200, 166760.4, { effectiveAt: "2026-01-01" }],
-    ], { checkedAt: NEW_BRAND_CHECKED_AT, effectiveAt: "2026-05-12", paintNote: "Soul Red Crystal / Machine Gray: +RM3,300 (kecuali Mid).", note: "OTR sebelum pakej Accessories Installed berasingan: Mid MY26 RM3,060; High MY26 RM6,160; MY25 RM3,160. Tambah jika dipilih. Harga 2.2D High dan MS Limited Edition belum dapat disahkan dalam PDF terkini." }),
+    ], { checkedAt: "2026-10-02", effectiveAt: "2026-05-12", paintNote: "Soul Red Crystal / Machine Gray: +RM3,300 (kecuali Mid).", note: "OTR sebelum pakej Accessories Installed berasingan: Mid MY26 RM3,060; High MY26 RM6,160; MY25 RM3,160. Tambah jika dipilih. Harga 2.2D High dan MS Limited Edition belum dapat disahkan dalam PDF terkini." }),
     catalogModel("CX-8", mazdaPdf(2025, "MazdaCX8"), [
       ["2.5G Mid 2WD", 163800, 165360.4],
       ["2.5G High 2WD", 169800, 171360.4],
       ["2.5G High Plus 2WD", 184800, 186360.4],
       ["2.5G Turbo High Plus AWD", 199800, 201360.4],
       ["2.2D High Plus 2WD", 191800, 193122.8],
-    ], { checkedAt: NEW_BRAND_CHECKED_AT, effectiveAt: "2025-11-01", paintNote: "Soul Red Crystal / Machine Gray: +RM3,000.", note: "OTR rasmi sebelum pakej Accessories Installed RM2,600 berasingan; tambah jika dipilih dalam aksesori tambahan." }),
+    ], { checkedAt: "2026-10-02", effectiveAt: "2025-11-01", paintNote: "Soul Red Crystal / Machine Gray: +RM3,000.", note: "OTR rasmi sebelum pakej Accessories Installed RM2,600 berasingan; tambah jika dipilih dalam aksesori tambahan." }),
     catalogModel("CX-60", mazdaPdf(2026, "MazdaCX60"), [
       ["2.5G High 2WD", 198900, 200510.4, { effectiveAt: "2025-07-16" }],
       ["3.3G M Hybrid AWD Black / Black", 250000, 252872.8, { effectiveAt: "2026-09-18" }],
       ["3.3G M Hybrid AWD Black / Tan", 250000, 252872.8, { effectiveAt: "2026-09-18" }],
       ["3.3G M Hybrid AWD Black / Pure White", 250000, 252872.8, { effectiveAt: "2026-09-18" }],
-    ], { checkedAt: NEW_BRAND_CHECKED_AT, note: "3.3G menggunakan mild hybrid; 2.5G petrol. Padanan warna badan/dalaman mengikut PDF rasmi." }),
+    ], { checkedAt: "2026-10-02", note: "3.3G menggunakan mild hybrid; 2.5G petrol. Padanan warna badan/dalaman mengikut PDF rasmi." }),
     catalogModel("CX-80", mazdaPdf(2025, "MazdaCX80"), [
       ["2.5G PHEV AWD", 295000, 296610.4],
-    ], { checkedAt: NEW_BRAND_CHECKED_AT, effectiveAt: "2025-09-15", powertrain: "PHEV" }),
+    ], { checkedAt: "2026-10-02", effectiveAt: "2025-09-15", powertrain: "PHEV" }),
     catalogModel("BT-50 Double Cab", mazdaPdf(2026, "Mazda_BT50"), [
       ["3.0D High Plus 6AT 4x4 MY25", 138000, 140418.4],
       ["3.0D High Plus 6AT 4x4 MY26", 138000, 140418.4],
-    ], { checkedAt: NEW_BRAND_CHECKED_AT, effectiveAt: "2026-07-01", note: "Private OTR; kod MY25 ZS82 RAA dan MY26 ZS82 RAW diterbitkan dalam PDF yang sama." }),
+    ], { checkedAt: "2026-10-02", effectiveAt: "2026-07-01", note: "Private OTR; kod MY25 ZS82 RAA dan MY26 ZS82 RAW diterbitkan dalam PDF yang sama." }),
   ],
   GWM: [
-    catalogModel("WEY G9 Hi4 PHEV", "https://www.gwm.com.my/content/dam/gwm/pages/my/en/models/wey-g9/gwm_wey_g9_wm_a4_flyer.pdf", [
+    catalogModel("WEY G9 Hi4 HEV", "https://www.gwm.com.my/content/dam/gwm/pages/my/en/models/wey-g9/1014/m4gwm00012_gwm_wey_g9_wm_a4_flyer_1_compressed.pdf", [
+      ["2.0T Hi4 HEV", 248910.8, 249800],
+    ], { checkedAt: NEW_BRAND_CHECKED_AT, powertrain: "Hybrid" }),
+    catalogModel("WEY G9 Hi4 PHEV", "https://www.gwm.com.my/content/dam/gwm/pages/my/en/models/wey-g9/1014/m4gwm00012_gwm_wey_g9_wm_a4_flyer_1_compressed.pdf", [
       ["Hi4 Ultra", 269380, 269800],
     ], { checkedAt: NEW_BRAND_CHECKED_AT, powertrain: "PHEV" }),
     catalogModel("HAVAL H6 HEV", "https://www.gwm.com.my/content/dam/gwm/pages/my/en/models/haval-h6-hev/gwm_h6_flyer_wm_fa4.pdf", [
@@ -296,7 +302,7 @@ const CAR_CATALOG = {
       { checkedAt: NEW_BRAND_CHECKED_AT, effectiveAt: "2026-01-01", powertrain: "EV" }),
     catalogModel("2026 ATTO 3", "https://drive.google.com/file/d/1Qy3WraoV9PIa4085AiZG-kW7zm6fk0Qh/view", [
       ["Ultra", 125800, 126660], ["Premium", 138800, 139835], ["Performance", 149800, 151165],
-    ], { checkedAt: NEW_BRAND_CHECKED_AT, effectiveAt: "2026-01-01", powertrain: "EV", note: "PDF PM dipautkan terus oleh pengedar rasmi di byd.simemotors.my/byd-atto-3." }),
+    ], { checkedAt: "2026-10-02", effectiveAt: "2026-01-01", powertrain: "EV", note: "PDF PM dipautkan terus oleh pengedar rasmi di byd.simemotors.my/byd-atto-3." }),
     catalogModel("DOLPHIN", bydPdf("DOLPHIN"), [
       ["Standard", 100000, 100740], ["Extended", 124900, 125760],
     ], { checkedAt: NEW_BRAND_CHECKED_AT, effectiveAt: "2026-01-01", powertrain: "EV" }),

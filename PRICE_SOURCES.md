@@ -1,5 +1,7 @@
 # Official Price Snapshot
 
+Latest recheck: [29 October 2026 audit](PRICE_AUDIT_2026-10-29.md). The September register below is historical; use `catalog.js` for current selections and model-specific check dates. The October audit identifies prices that could not be revalidated.
+
 Checked: 30 September 2026 (Malaysia time). Market: Peninsular Malaysia.
 This is a manually verified snapshot of current manufacturer pages and their linked PDFs, not a live price feed. An older PDF effective date is retained when that document is still linked by the current manufacturer page.
 

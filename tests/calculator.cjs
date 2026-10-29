@@ -161,8 +161,11 @@ function expectedRebate(brand, model, variant) {
     await page.clock.setSystemTime(new Date('2026-10-01T04:00:00Z'));
     await reset();
     v = await values(); assert.equal(v.rebate, 0);
+    assert.ok(!(await page.locator('#priceNote').textContent()).includes('Snapshot October'));
+    await page.clock.setSystemTime(new Date('2026-11-01T04:00:00Z'));
+    await reset();
     await page.locator('.price-details summary').click();
-    assert.ok((await page.locator('#priceNote').innerText()).includes('Snapshot September'));
+    assert.ok((await page.locator('#priceNote').innerText()).includes('Snapshot October'));
     assert.ok(!(await page.inputValue('#templateOutput')).includes('not for the current month'));
     await page.clock.setSystemTime(new Date('2026-10-04T04:00:00Z'));
     let confirmedOctober = 0;
